@@ -3,7 +3,7 @@ import axios from 'axios'
 import './styles/App.css'
 
 function App() {
-  const [data, setData] = useState("")
+  const [data, setData] = useState<Array<{id: number; title: string}>>([])
 
   useEffect(() => {
     axios.get('https://localhost/dev/katakata/backend/index.php')
@@ -15,7 +15,11 @@ function App() {
     <>
       <h1>katakata</h1>
       <div>
-        
+        <ul>
+          {data.map(post => (
+            <li key={post.id}>{post.title}</li>
+          ))}
+        </ul>
       </div>
     </>
   )
