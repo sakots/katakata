@@ -3,7 +3,12 @@ import axios from 'axios'
 import './styles/App.css'
 
 function App() {
-  const [data, setData] = useState<Array<{id: number; title: string}>>([])
+  const [data, setData] = useState<DataProps[]>([])
+
+  interface DataProps {
+    id: number
+    title: string
+  }
 
   useEffect(() => {
     axios.get('https://localhost/dev/katakata/backend/index.php')
