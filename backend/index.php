@@ -8,18 +8,25 @@
 
 // なければDB作成
 if (!file_exists('katakata.db')){
-  $dbname = 'katakata.db';
   try {
-    $db = new PDO('sqlite:'.$dbname);
+    $db = new PDO('sqlite:katakata.db');
     $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $db->exec("CREATE TABLE IF NOT EXISTS notes (
       id INTEGER PRIMARY KEY AUTOINCREMENT, -- ID
-      parent_id INTEGER, -- 親ノートID
+      parent_directory TEXT, -- 親ディレクトリ
       name TEXT, -- 名前
       item_number TEXT, -- 型番
       count INTEGER, -- 数量
       remaining_number INTEGER, -- 残数
       remaining_count INTEGER, -- 残量
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )");
+    $db->exec("CREATE TABLE IF NOT EXISTS directories (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, -- ID
+      parent_id INTEGER, -- 親ID
+      directory_name TEXT, -- ディレクトリ名
+      name TEXT, -- 名前
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )");
@@ -29,3 +36,6 @@ if (!file_exists('katakata.db')){
     exit();
   }
 }
+
+// モード選択
+$mode = filter_input(INPUT_GET, 'mode') ?? 'default';
