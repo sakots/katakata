@@ -1,27 +1,25 @@
-import { useState, useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
 import './styles/App.css'
 
 function App() {
-  const [data, setData] = useState<DataProps[]>([])
 
-  interface DataProps {
+  interface Post {
     id: number
     title: string
   }
 
-  useEffect(() => {
-    axios.get('https://localhost/dev/katakata/backend/index.php')
-      .then(response => setData(response.data))
-      .catch(error => console.error(error))
-  }, [])
+  const { data } = useQuery<Post[]>({
+  queryKey: ["posts"],
+  queryFn: () => axios.get("/issues").then(res => res.data)
+})
 
   return (
     <>
       <h1>katakata</h1>
       <div>
         <ul>
-          {data.map(post => (
+          {data?.map(post => (
             <li key={post.id}>{post.title}</li>
           ))}
         </ul>
