@@ -11,7 +11,7 @@ function App() {
 
   const { data } = useQuery<Post[]>({
   queryKey: ["posts"],
-  queryFn: () => axios.get("/issues").then(res => res.data)
+  queryFn: () => axios.get(import.meta.env.VITE_API_URL + "/issues").then(res => res.data)
 })
 
   return (
