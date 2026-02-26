@@ -29,7 +29,16 @@ interface TreeResponse {
 }
 
 const fetchTree = async (): Promise<TreeResponse> => {
-  const url = `${import.meta.env.VITE_API_URL}/backend/getTree.php`;
+  const envBase = import.meta.env.VITE_API_URL ?? '';
+  const base = String(envBase).replace(/\/$/, '');
+  let url = '';
+  if (!base) {
+    url = '/backend/getTree.php';
+  } else if (base.endsWith('/backend')) {
+    url = `${base}/getTree.php`;
+  } else {
+    url = `${base}/backend/getTree.php`;
+  }
   const res = await axios.get<TreeResponse>(url);
   return res.data;
 }
