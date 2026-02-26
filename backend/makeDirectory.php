@@ -6,7 +6,11 @@
 // Backend file for making directories
 //-------------
 
+// ensure database exists and tables are created
 require_once 'index.php';
+
+header('Content-Type: application/json');
+header('Access-Control-Allow-Origin: *');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $parent_id = filter_input(INPUT_POST, 'parent_id');
