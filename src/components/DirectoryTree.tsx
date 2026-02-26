@@ -67,7 +67,7 @@ const DirectoryTree: React.FC = () => {
   const createDirMutation = useMutation({
     mutationFn: async (newDir: { parent_id: number | null; name: string }) =>
       axios.post(
-        `${import.meta.env.VITE_API_URL}/backend/makeDirectory.php`,
+        `${import.meta.env.VITE_API_URL}/makeDirectory.php`,
         new URLSearchParams({
           parent_id: newDir.parent_id?.toString() || '',
           directory_name: newDir.name,
@@ -86,7 +86,7 @@ const DirectoryTree: React.FC = () => {
   const createItemMutation = useMutation({
     mutationFn: async (item: { parent_directory: number | null; name: string; item_number: string; count: number; remaining_number: string; remaining_count: number }) =>
       axios.post(
-        `${import.meta.env.VITE_API_URL}/backend/addItem.php`,
+        `${import.meta.env.VITE_API_URL}/addItem.php`,
         new URLSearchParams({
           parent_directory: item.parent_directory?.toString() || '',
           name: item.name,
@@ -139,7 +139,7 @@ const DirectoryTree: React.FC = () => {
       </div>
       {dir.notes && dir.notes.length > 0 && (
         <ul>
-          {dir.notes.map(note => (
+          {dir.notes?.map(note => (
             <li key={note.id}>
               {note.name} {note.item_number && `(#${note.item_number})`} x{note.count} (残: {note.remaining_count})
             </li>
@@ -285,7 +285,7 @@ const DirectoryTree: React.FC = () => {
         <div>
           <h2>未割当アイテム</h2>
           <ul>
-            {data.rootNotes.map(note => (
+            {data.rootNotes?.map(note => (
               <li key={note.id}>
                 {note.name} {note.item_number && `(#${note.item_number})`} x{note.count} (残: {note.remaining_count})
               </li>
@@ -293,7 +293,7 @@ const DirectoryTree: React.FC = () => {
           </ul>
         </div>
       )}
-      <ul>{data?.tree.map(dir => renderDir(dir))}</ul>
+      <ul>{data?.tree?.map(dir => renderDir(dir))}</ul>
     </>
   );
 }
