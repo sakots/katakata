@@ -11,48 +11,63 @@ try {
 
   $stmt = $db->query("SELECT * FROM directories");
   $dirs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+  // filter out any malformed rows (e.g. id null)
+  $dirs = array_filter($dirs, function($d) {
+    return is_array($d) && isset($d['id']) && $d['id'] !== null && $d['id'] !== '';
+  });
 
   $stmt = $db->query("SELECT * FROM notes");
   $notes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-  // build directory map with children and notes
+  // build directory map with children and notes (no references)
   $byId = [];
   foreach ($dirs as $dir) {
-    $dir['children'] = [];
-    $dir['notes'] = [];
-    $byId[$dir['id']] = $dir;
+    if (!is_array($dir)) continue;
+    $id = (int)$dir['id'];
+    $byId[$id] = [
+      'id' => $id,
+      'parent_id' => $dir['parent_id'],
+      'directory_name' => $dir['directory_name'],
+      'created_at' => $dir['created_at'],
+      'updated_at' => $dir['updated_at'],
+      'children' => [],
+      'notes' => [],
+    ];
   }
 
   // attach notes to directories based on parent_directory (id or name)
   $rootNotes = [];
   foreach ($notes as $note) {
-    $parent = null;
-    if (is_numeric($note['parent_directory']) && isset($byId[(int)$note['parent_directory']])) {
-      $parent = &$byId[(int)$note['parent_directory']];
+    $parentId = null;
+    if (is_numeric($note['parent_directory'])) {
+      $parentId = (int)$note['parent_directory'];
+    }
+    if ($parentId !== null && isset($byId[$parentId])) {
+      $byId[$parentId]['notes'][] = $note;
     } else {
+      // try matching by name
+      $found = false;
       foreach ($byId as &$d) {
         if ($d['directory_name'] === $note['parent_directory']) {
-          $parent = &$d;
+          $d['notes'][] = $note;
+          $found = true;
           break;
         }
       }
-    }
-
-    if ($parent) {
-      $parent['notes'][] = $note;
-    } else {
-      // no matching directory, treat as root-level note
-      $rootNotes[] = $note;
+      if (!$found) {
+        $rootNotes[] = $note;
+      }
     }
   }
 
-  // build tree
+  // build tree without references
   $tree = [];
-  foreach ($byId as $id => &$dir) {
-    if ($dir['parent_id'] !== null && isset($byId[$dir['parent_id']])) {
-      $byId[$dir['parent_id']]['children'][] = &$dir;
+  foreach ($byId as $id => $dir) {
+    $pid = isset($dir['parent_id']) && $dir['parent_id'] !== '' ? (int)$dir['parent_id'] : null;
+    if ($pid !== null && isset($byId[$pid])) {
+      $byId[$pid]['children'][] = $dir;
     } else {
-      $tree[] = &$dir;
+      $tree[] = $dir;
     }
   }
 

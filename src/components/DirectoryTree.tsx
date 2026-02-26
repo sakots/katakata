@@ -28,17 +28,17 @@ interface TreeResponse {
   rootNotes: Note[]
 }
 
-const fetchTree = async (): Promise<TreeResponse> => {
+const buildApiUrl = (path: string) => {
   const envBase = import.meta.env.VITE_API_URL ?? '';
   const base = String(envBase).replace(/\/$/, '');
-  let url = '';
-  if (!base) {
-    url = '/backend/getTree.php';
-  } else if (base.endsWith('/backend')) {
-    url = `${base}/getTree.php`;
-  } else {
-    url = `${base}/backend/getTree.php`;
-  }
+  if (!base) return path;
+  if (base.endsWith('/backend')) return `${base}/${path}`;
+  return `${base}/backend/${path}`;
+};
+
+const fetchTree = async (): Promise<TreeResponse> => {
+  const url = buildApiUrl('getTree.php');
+  console.log('fetchTree url =', url);
   const res = await axios.get<TreeResponse>(url);
   return res.data;
 }
@@ -68,16 +68,20 @@ const DirectoryTree: React.FC = () => {
 
   // Create directory mutation
   const createDirMutation = useMutation({
-    mutationFn: async (newDir: { parent_id: number | null; name: string }) =>
-      axios.post(
-        `${import.meta.env.VITE_API_URL}/makeDirectory.php`,
+    mutationFn: async (newDir: { parent_id: number | null; name: string }) => {
+      const url = buildApiUrl('makeDirectory.php');
+      console.log('createDirMutation url', url, 'parent', newDir.parent_id);
+      return axios.post(
+        url,
         new URLSearchParams({
           parent_id: newDir.parent_id?.toString() || '',
           directory_name: newDir.name,
         }),
         { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
-      ),
-    onSuccess: () => {
+      );
+    },
+    onSuccess: (res) => {
+      console.log('createDirMutation success', res?.data);
       queryClient.invalidateQueries({ queryKey: ['directoryTree'] });
       setShowNewDirForm(false);
       setNewDirName('');
@@ -93,7 +97,7 @@ const DirectoryTree: React.FC = () => {
         new URLSearchParams({
           parent_directory: item.parent_directory?.toString() || '',
           name: item.name,
-          item_number: item.item_number,
+          item_number: String(item.item_number),
           count: item.count.toString(),
           remaining_number: item.remaining_number,
           remaining_count: item.remaining_count.toString(),
@@ -101,6 +105,7 @@ const DirectoryTree: React.FC = () => {
         { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
       ),
     onSuccess: () => {
+      console.log('item created', newItem);
       queryClient.invalidateQueries({ queryKey: ['directoryTree'] });
       setShowNewItemForm(false);
       setItemParentDir(null);
@@ -111,6 +116,10 @@ const DirectoryTree: React.FC = () => {
         remaining_number: '',
         remaining_count: 1,
       });
+    },
+    onError: (err) => {
+      console.error('createItem error', err);
+      alert('アイテム作成中にエラーが発生しました: ' + err);
     },
   });
 
@@ -134,8 +143,10 @@ const DirectoryTree: React.FC = () => {
     },
   });
 
-  if (isLoading) return <div>L読み込み中…</div>;
-  if (error) return <div>読み込みに失敗しました</div>;
+  if (isLoading) return <div>読み込み中…</div>;
+  if (error) return <div>読み込みに失敗しました: {String(error)}</div>;
+
+  console.log('DirectoryTree render', { data, newItem, itemParentDir, showNewItemForm });
 
   const renderDir = (dir: Directory) => (
     <li key={dir.id}>
@@ -144,6 +155,7 @@ const DirectoryTree: React.FC = () => {
         <button
           onClick={() => {
             setNewDirParentId(dir.id);
+            console.log('open new dir form for parent', dir.id, dir.directory_name);
             setShowNewDirForm(true);
           }}
           style={{marginLeft: '8px', fontSize: '0.9em'}}
@@ -200,7 +212,9 @@ const DirectoryTree: React.FC = () => {
                 </span>
               ) : (
                 <span>
-                  {note.name} {note.item_number && `(#${note.item_number})`} x{note.count} (残: {note.remaining_count})
+                  {note.name} {note.item_number && `(#${note.item_number})`} 数量:{note.count}
+                  {note.remaining_number && ` 残数:${note.remaining_number}`}
+                  {note.remaining_count !== undefined && ` 残量:${note.remaining_count}`}
                   <button
                     onClick={() => {
                       setEditingNoteId(note.id);
@@ -235,21 +249,18 @@ const DirectoryTree: React.FC = () => {
         >
           + 新規ディレクトリ
         </button>
-        <button
-          onClick={() => {
-            setItemParentDir(null);
-            setShowNewItemForm(true);
-          }}
-          style={{marginLeft: '8px', fontSize: '1em', padding: '8px 16px'}}
-        >
-          + 新規アイテム
-        </button>
+        {/* アイテムは各ディレクトリごとのボタンのみで追加 */}
       </div>
 
       {/* Create directory form */}
       {showNewDirForm && (
         <div style={{border: '1px solid #ccc', padding: '12px', marginBottom: '20px', borderRadius: '4px'}}>
           <h3>ディレクトリを作成</h3>
+          {newDirParentId !== null ? (
+            <div>親ディレクトリID: {newDirParentId}</div>
+          ) : (
+            <div>ルート直下に作成</div>
+          )}
           <input
             type="text"
             placeholder="ディレクトリ名"
@@ -281,7 +292,7 @@ const DirectoryTree: React.FC = () => {
       )}
 
       {/* Create item form */}
-      {showNewItemForm && (
+      {showNewItemForm && itemParentDir !== null && (
         <div style={{border: '1px solid #ccc', padding: '12px', marginBottom: '20px', borderRadius: '4px'}}>
           <h3>アイテムを追加</h3>
           <div style={{marginBottom: '8px'}}>
@@ -298,7 +309,15 @@ const DirectoryTree: React.FC = () => {
               type="text"
               placeholder="型番"
               value={newItem.item_number}
-              onChange={(e) => setNewItem({...newItem, item_number: e.target.value})}
+              onChange={(e) => {
+                try {
+                  const v = e.target.value;
+                  console.log('item_number changed to', v);
+                  setNewItem(prev => ({...prev, item_number: v}));
+                } catch (err) {
+                  console.error('item_number onChange error', err);
+                }
+              }}
               style={{marginRight: '8px', padding: '4px', width: '150px'}}
             />
           </div>
@@ -314,14 +333,14 @@ const DirectoryTree: React.FC = () => {
           <div style={{marginBottom: '8px'}}>
             <input
               type="text"
-              placeholder="残数"
+              placeholder="残数(テキスト)"
               value={newItem.remaining_number}
               onChange={(e) => setNewItem({...newItem, remaining_number: e.target.value})}
               style={{marginRight: '8px', padding: '4px', width: '150px'}}
             />
           </div>
           <div style={{marginBottom: '12px'}}>
-            <label style={{marginRight: '8px'}}>残量：</label>
+            <label style={{marginRight: '8px'}}>残量(数値)：</label>
             <input
               type="number"
               value={newItem.remaining_count}
