@@ -57,6 +57,9 @@ const DirectoryTree: React.FC = () => {
     remaining_number: '',
     remaining_count: 1,
   });
+  const [editingNoteId, setEditingNoteId] = useState<number | null>(null);
+  const [editRemainingNumber, setEditRemainingNumber] = useState('');
+  const [editRemainingCount, setEditRemainingCount] = useState(1);
 
   const { data, isLoading, error } = useQuery<TreeResponse>({
     queryKey: ['directoryTree'],
@@ -111,6 +114,26 @@ const DirectoryTree: React.FC = () => {
     },
   });
 
+  // Update note mutation
+  const updateItemMutation = useMutation({
+    mutationFn: async (update: { id: number; remaining_number: string; remaining_count: number }) =>
+      axios.post(
+        `${import.meta.env.VITE_API_URL}/updateItem.php`,
+        new URLSearchParams({
+          id: update.id.toString(),
+          remaining_number: update.remaining_number,
+          remaining_count: update.remaining_count.toString(),
+        }),
+        { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['directoryTree'] });
+      setEditingNoteId(null);
+      setEditRemainingNumber('');
+      setEditRemainingCount(1);
+    },
+  });
+
   if (isLoading) return <div>L読み込み中…</div>;
   if (error) return <div>読み込みに失敗しました</div>;
 
@@ -139,9 +162,57 @@ const DirectoryTree: React.FC = () => {
       </div>
       {dir.notes && dir.notes.length > 0 && (
         <ul>
-          {dir.notes?.map(note => (
-            <li key={note.id}>
-              {note.name} {note.item_number && `(#${note.item_number})`} x{note.count} (残: {note.remaining_count})
+          {dir.notes.map(note => (
+            <li key={note.id} style={{ marginBottom: '4px' }}>
+              {editingNoteId === note.id ? (
+                <span>
+                  <input
+                    type="text"
+                    value={editRemainingNumber}
+                    onChange={e => setEditRemainingNumber(e.target.value)}
+                    placeholder="残数"
+                    style={{ width: '80px', marginRight: '4px' }}
+                  />
+                  <input
+                    type="number"
+                    value={editRemainingCount}
+                    onChange={e => setEditRemainingCount(parseInt(e.target.value) || 0)}
+                    placeholder="残量"
+                    style={{ width: '60px', marginRight: '4px' }}
+                  />
+                  <button
+                    onClick={() => {
+                      if (note.id) {
+                        updateItemMutation.mutate({
+                          id: note.id,
+                          remaining_number: editRemainingNumber,
+                          remaining_count: editRemainingCount,
+                        });
+                      }
+                    }}
+                    disabled={updateItemMutation.isPending}
+                  >
+                    {updateItemMutation.isPending ? '更新中...' : '保存'}
+                  </button>
+                  <button onClick={() => setEditingNoteId(null)} style={{ marginLeft: '4px' }}>
+                    キャンセル
+                  </button>
+                </span>
+              ) : (
+                <span>
+                  {note.name} {note.item_number && `(#${note.item_number})`} x{note.count} (残: {note.remaining_count})
+                  <button
+                    onClick={() => {
+                      setEditingNoteId(note.id);
+                      setEditRemainingNumber(String(note.remaining_number));
+                      setEditRemainingCount(note.remaining_count);
+                    }}
+                    style={{ marginLeft: '8px', fontSize: '0.8em' }}
+                  >
+                    編集
+                  </button>
+                </span>
+              )}
             </li>
           ))}
         </ul>
@@ -285,7 +356,7 @@ const DirectoryTree: React.FC = () => {
         <div>
           <h2>未割当アイテム</h2>
           <ul>
-            {data.rootNotes?.map(note => (
+            {data.rootNotes.map(note => (
               <li key={note.id}>
                 {note.name} {note.item_number && `(#${note.item_number})`} x{note.count} (残: {note.remaining_count})
               </li>
