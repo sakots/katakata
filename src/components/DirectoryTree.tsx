@@ -40,8 +40,8 @@ const DirectoryTree: React.FC = () => {
     queryFn: fetchTree,
   });
 
-  if (isLoading) return <div>Loading directories...</div>;
-  if (error) return <div>Failed to load directory structure</div>;
+  if (isLoading) return <div>L読み込み中…</div>;
+  if (error) return <div>読み込みに失敗しました</div>;
 
   const renderDir = (dir: Directory) => (
     <li key={dir.id}>
