@@ -26,7 +26,6 @@ if (!file_exists('katakata.db')){
       id INTEGER PRIMARY KEY AUTOINCREMENT, -- ID
       parent_id INTEGER, -- 親ID
       directory_name TEXT, -- ディレクトリ名
-      name TEXT, -- 名前
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )");
@@ -37,5 +36,3 @@ if (!file_exists('katakata.db')){
   }
 }
 
-// モード選択
-$mode = filter_input(INPUT_GET, 'mode') ?? 'default';
