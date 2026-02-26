@@ -6,7 +6,10 @@
 // Backend file
 //-------------
 
-// なければDB作成
+// CORS: allow frontend to call these endpoints
+header('Access-Control-Allow-Origin: *');
+
+// なければDB作成（出力は行わない）
 if (!file_exists('katakata.db')){
   try {
     $db = new PDO('sqlite:katakata.db');
@@ -29,9 +32,10 @@ if (!file_exists('katakata.db')){
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )");
-    echo 'DB created';
   } catch (PDOException $e) {
-    echo "Database error: " . $e->getMessage();
+    error_log("Database error: " . $e->getMessage());
+    // do not echo to avoid breaking JSON responses in included scripts
+    http_response_code(500);
     exit();
   }
 }
