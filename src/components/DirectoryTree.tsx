@@ -47,7 +47,7 @@ const DirectoryTree: React.FC = () => {
   const queryClient = useQueryClient();
   const [showNewDirForm, setShowNewDirForm] = useState(false);
   const [newDirName, setNewDirName] = useState('');
-  const [newDirParentId, setNewDirParentId] = useState<number | null>(null);
+  // parent id is no longer used because hierarchy is disabled
   const [showNewItemForm, setShowNewItemForm] = useState(false);
   const [itemParentDir, setItemParentDir] = useState<number | null>(null);
   const [newItem, setNewItem] = useState({
@@ -70,11 +70,12 @@ const DirectoryTree: React.FC = () => {
   const createDirMutation = useMutation({
     mutationFn: async (newDir: { parent_id: number | null; name: string }) => {
       const url = buildApiUrl('makeDirectory.php');
+      // always send null parent_id to prevent nested directories
       console.log('createDirMutation url', url, 'parent', newDir.parent_id);
       return axios.post(
         url,
         new URLSearchParams({
-          parent_id: newDir.parent_id?.toString() || '',
+          parent_id: '', // ignore parent
           directory_name: newDir.name,
         }),
         { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
@@ -85,7 +86,6 @@ const DirectoryTree: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['directoryTree'] });
       setShowNewDirForm(false);
       setNewDirName('');
-      setNewDirParentId(null);
     },
   });
 
@@ -152,16 +152,7 @@ const DirectoryTree: React.FC = () => {
     <li key={dir.id}>
       <div style={{marginBottom: '8px'}}>
         <strong>{dir.directory_name}</strong>
-        <button
-          onClick={() => {
-            setNewDirParentId(dir.id);
-            console.log('open new dir form for parent', dir.id, dir.directory_name);
-            setShowNewDirForm(true);
-          }}
-          style={{marginLeft: '8px', fontSize: '0.9em'}}
-        >
-          +フォルダ
-        </button>
+        {/* nested folder creation disabled */}
         <button
           onClick={() => {
             setItemParentDir(dir.id);
@@ -242,7 +233,6 @@ const DirectoryTree: React.FC = () => {
       <div style={{marginBottom: '20px'}}>
         <button
           onClick={() => {
-            setNewDirParentId(null);
             setShowNewDirForm(true);
           }}
           style={{fontSize: '1em', padding: '8px 16px'}}
@@ -256,11 +246,7 @@ const DirectoryTree: React.FC = () => {
       {showNewDirForm && (
         <div style={{border: '1px solid #ccc', padding: '12px', marginBottom: '20px', borderRadius: '4px'}}>
           <h3>ディレクトリを作成</h3>
-          {newDirParentId !== null ? (
-            <div>親ディレクトリID: {newDirParentId}</div>
-          ) : (
-            <div>ルート直下に作成</div>
-          )}
+          <div>ルート直下に作成</div>
           <input
             type="text"
             placeholder="ディレクトリ名"
@@ -271,7 +257,7 @@ const DirectoryTree: React.FC = () => {
           <button
             onClick={() =>
               createDirMutation.mutate({
-                parent_id: newDirParentId,
+                parent_id: null,
                 name: newDirName,
               })
             }

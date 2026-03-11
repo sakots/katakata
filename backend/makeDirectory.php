@@ -13,12 +13,13 @@ header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  $parent_id = filter_input(INPUT_POST, 'parent_id');
+  // ignore any posted parent_id to disable nested directories
+  // as per requirement, all directories live at root level
+  // we'll read the value for logging but then discard it.
+  $posted_parent = filter_input(INPUT_POST, 'parent_id');
   $directory_name = filter_input(INPUT_POST, 'directory_name');
-  // convert empty string to null so SQLite doesn't insert 0
-  if ($parent_id === '' || $parent_id === false) {
-    $parent_id = null;
-  }
+  // do not allow nested directories
+  $parent_id = null;
 
   try {
     $db = new PDO('sqlite:katakata.db');

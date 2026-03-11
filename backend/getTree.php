@@ -20,13 +20,15 @@ try {
   $notes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
   // build directory map with children and notes (no references)
+  // since hierarchy is disabled we ignore any parent relationships
   $byId = [];
   foreach ($dirs as $dir) {
     if (!is_array($dir)) continue;
     $id = (int)$dir['id'];
     $byId[$id] = [
       'id' => $id,
-      'parent_id' => $dir['parent_id'],
+      // parent_id kept for compatibility but not used
+      'parent_id' => null,
       'directory_name' => $dir['directory_name'],
       'created_at' => $dir['created_at'],
       'updated_at' => $dir['updated_at'],
@@ -60,16 +62,8 @@ try {
     }
   }
 
-  // build tree without references
-  $tree = [];
-  foreach ($byId as $id => $dir) {
-    $pid = isset($dir['parent_id']) && $dir['parent_id'] !== '' ? (int)$dir['parent_id'] : null;
-    if ($pid !== null && isset($byId[$pid])) {
-      $byId[$pid]['children'][] = $dir;
-    } else {
-      $tree[] = $dir;
-    }
-  }
+  // build tree without references. with hierarchy disabled we simply return all directories as roots
+  $tree = array_values($byId);
 
   echo json_encode(['tree' => $tree, 'rootNotes' => $rootNotes]);
 } catch (PDOException $e) {
