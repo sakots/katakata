@@ -89,6 +89,26 @@ const DirectoryTree: React.FC = () => {
     },
   });
 
+  // Delete directory mutation
+  const deleteDirMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const url = buildApiUrl('deleteDirectory.php');
+      console.log('deleteDirMutation url', url, 'id', id);
+      return axios.post(
+        url,
+        new URLSearchParams({ id: id.toString() }),
+        { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['directoryTree'] });
+    },
+    onError: (err) => {
+      console.error('deleteDir error', err);
+      alert('ディレクトリ削除中にエラーが発生しました: ' + err);
+    },
+  });
+
   // Create item mutation
   const createItemMutation = useMutation({
     mutationFn: async (item: { parent_directory: number | null; name: string; item_number: string; count: number; remaining_number: string; remaining_count: number }) =>
@@ -158,9 +178,20 @@ const DirectoryTree: React.FC = () => {
             setItemParentDir(dir.id);
             setShowNewItemForm(true);
           }}
-          style={{marginLeft: '4px', fontSize: '0.9em'}}
+          style={{marginLeft: '8px', fontSize: '0.9em'}}
         >
           +アイテム
+        </button>
+        <button
+          onClick={() => {
+            if (window.confirm(`ディレクトリ "${dir.directory_name}" を削除しますか？`)) {
+              deleteDirMutation.mutate(dir.id);
+            }
+          }}
+          style={{marginLeft: '8px', fontSize: '0.9em', color: 'red'}}
+          disabled={deleteDirMutation.isPending}
+        >
+          {deleteDirMutation.isPending ? '削除中...' : '削除'}
         </button>
       </div>
       {dir.notes && dir.notes.length > 0 && (
