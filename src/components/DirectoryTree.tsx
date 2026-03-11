@@ -163,6 +163,23 @@ const DirectoryTree: React.FC = () => {
     },
   });
 
+  // Delete note mutation
+  const deleteItemMutation = useMutation({
+    mutationFn: async (id: number) =>
+      axios.post(
+        `${import.meta.env.VITE_API_URL}/deleteItem.php`,
+        new URLSearchParams({ id: id.toString() }),
+        { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['directoryTree'] });
+    },
+    onError: (err) => {
+      console.error('deleteItem error', err);
+      alert('アイテム削除中にエラーが発生しました: ' + err);
+    },
+  });
+
   if (isLoading) return <div>読み込み中…</div>;
   if (error) return <div>読み込みに失敗しました: {String(error)}</div>;
 
@@ -246,6 +263,17 @@ const DirectoryTree: React.FC = () => {
                     style={{ marginLeft: '8px', fontSize: '0.8em' }}
                   >
                     編集
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (window.confirm(`アイテム "${note.name}" を削除しますか？`)) {
+                        deleteItemMutation.mutate(note.id);
+                      }
+                    }}
+                    style={{ marginLeft: '8px', fontSize: '0.8em', color: 'red' }}
+                    disabled={deleteItemMutation.isPending}
+                  >
+                    {deleteItemMutation.isPending ? '削除中...' : '削除'}
                   </button>
                 </span>
               )}
